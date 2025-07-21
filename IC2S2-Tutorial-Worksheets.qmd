@@ -97,7 +97,7 @@ mps <- make_model_parameters(graph = g, adaptive_fitness = 1.2, drop_rate = 0.1
 )
 cabm <- make_abm(mps); 
 cabm$get_agent(2)$set_behavior("Adaptive"); 
-cabm$get_agent(2)$set_fitness(1.2); 
+cabm$get_agent(2)$set_fitness(1.8); 
 trial <- run_trial(cabm, stop = fixated)
 plot_prevalence(trial, tracked_behaviors = c("Adaptive", "Legacy"))
 ```
@@ -172,7 +172,7 @@ length(trials)
 
 YAY.\
 \
-Now let's plot the results. We're aiming for the \[outcomes figure in the `socmod` doc\](), but we have many less trials than I used there, since it will take too long to run that many for this tutorial.
+Now let's plot the results. We're aiming for the \[outcomes figure in the `socmod` doc\](<https://css4s.github.io/socmod/#example-2b-success-rate-and-average-fixation-time-across-adaptive-fitness>), but we have many less trials than I used there, since it will take too long to run that many for this tutorial.
 
 ```{r}
 outcomes <- summarise_outcomes(
@@ -206,11 +206,11 @@ outcomes_norm %>%
 
 ## Exercise: contagion and frequency-biased learning
 
-`socmod` provides contagion and frequency-biased learning strategies. In the first example above we assumed agents learned via contagion learning. Then for our computational experiment example we switched to success-biased learning.
+`socmod` provides contagion and frequency-biased learning strategies. In the first example above we assumed agents learned via contagion learning. Then for our computational experiment example we switched to success-biased learning. For this exercise, try recreating the experiment above but use contagion and systematically vary adoption rate.
 
 ## Cooperative conservation
 
-In the chapter on cooperative conservation, I develop both a geometric game theory analysis and agent-based model of the evolution of cooperation on a spatial grid. This has applications to conservation problems where cooperation on a spatial grid is essential, as in groundwater conservation in the California Central Valley and other government-managed watersheds.
+In the [chapter on cooperative conservation](https://css4s.github.io/IC2S2-Tutorial/cooperation.html), I develop both a geometric game theory analysis and agent-based model of the evolution of cooperation on a spatial grid. This has applications to conservation problems where cooperation on a spatial grid is essential, as in groundwater conservation in the California Central Valley and other government-managed watersheds.
 
 We will work through that chapter together. There are several exercises there that you could choose from if you want to gain experience with spatial agent-based modeling for conservation.
 
