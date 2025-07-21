@@ -4,6 +4,15 @@ author: Matt Turner
 bibliography: ic2s2-2025.bib
 ---
 
+```{r}
+#| setup: true
+#| output: false
+#| echo: false
+library(socmod)
+library(igraph)
+library(ggplot2)
+```
+
 This worksheet has problem sets and guidance for developing models of social diffusion for use in designing sustainability interventions from empirically-motivated first principles of social cognition and social processes.
 
 ## Outline
@@ -18,12 +27,16 @@ This worksheet has problem sets and guidance for developing models of social dif
 
 ## Installation
 
-Install `socmod` from GitHub like so
+First, install [R and RStudio](https://rstudio-education.github.io/hopr/starting.html).
+
+Then install `socmod` from GitHub like so
 
 ```{r}
 #| output: false
 # devtools::install_github("css4s/socmod")
 ```
+
+Not you do not need to have `git` installed to use this command since it just downloads the code from github.
 
 ## Fundamentals of agent-based modeling in R
 
@@ -33,33 +46,173 @@ First, there's R6, which provides an API for defining custom classes, e.g., to d
 
 R6 classes have *fields*, which can be used to represent attributes, and *methods*, which are functions or behaviors that instances of the class can do. For example, the Agent class provided by `socmod` has fields representing its behavior and its *fitness*, which is an abstraction for apparent wealth, skills, happiness, or other features that could make the person an attractive teacher.
 
-See the R script `R/fundamentals.R` for some demonstrations of **functional programming** and **defining custom classes in R**. We make extensive use of functional programming in agent-based modeling because we provide *rules* in the form of software *functions* that exist independently of models or agents. It is not just `socmod`: NetLogo, one of if not the most widely used open source agent-based modeling software packages is essentially a functional programming language that evolved from other functional programming languages from some decades ago.
+See the [Computational Techniques for Agent-based Modeling section of the Tutorial Notes Intro](https://css4s.github.io/IC2S2-Tutorial/intro.html#computational-techniques-for-agent-based-modeling) for some demonstrations of **functional programming** and **defining custom classes in R**, as well as helpful notes on data collections in R. We make extensive use of functional programming in agent-based modeling because we provide *rules* in the form of software *functions* that exist independently of models or agents. It is not just `socmod` that uses functional programming. NetLogo, one of if not the most widely used open source agent-based modeling software packages is essentially a functional programming language that evolved from other functional programming languages from some decades ago.
+
+### Live coding example: our own custom class
 
 ### Exercise:
 
-Create a set of custom class to represent something related to your research, your hobbies, etc. For another example beyond the football one, one student in my course this year created a `Forest` class that had a `trees` field, which was an R list of instances of another class called `Tree`. A `Forest` could track recent rainfall or the spread of pests like the pine bark beetle that loves to infest dried out trees in western North America, exacerbating the risk of catastrophic wildfires due to frequent droughts. Feel free to make your own version of the Tree and Forest classes, or extend the football example from the Notes.
+Create a set of custom class to represent something related to your research, your hobbies, etc. For another example beyond the football one, one student in my course this year created a `Forest` class that had a `trees` field, which was an R list of instances of another class called `Tree`. A `Forest` could track recent rainfall or the spread of pests like the pine bark beetle that loves to infest dried out trees in western North America, exacerbating the risk of catastrophic wildfires due to frequent droughts. Feel free to make your own version of the Tree and Forest classes, or extend the \[football example from the Notes\]().
 
-## Contagion-based learning: a first example
+## Agent-based diffusion model
 
-Before diving in to details, let's see agent-based contagion diffusion in action. In `socmod` we provide `partner_selection` and `interaction` learning rules, plus optionally a `model_step`, and a label for the dynamics that you specify. Let's create some agents and use contagion learning for
+Before diving in to details, let's see agent-based contagion diffusion in action. Note that success-biased learning is used by default, so we'll implicitly use that for this second example.
 
-## Formal models of behavior diffusion
+First, let's follow the [Agent-based models of social behavior](https://css4s.github.io/IC2S2-Tutorial/intro.html#agent-based-models-of-social-behavior) example from the Introduction of the notes.
 
-The prevalence dynamics that guided the design of agent-based models have *formal*, i.e., *mathematical*, versions that use calculus to gain insight into what strategies might work best in which situations, and which should be avoided. One surprising result so far is that conformity is mostly a weak driver of adaptation diffusion compared to success-biased learning. Conformity has been intensely studied over several decades as an explanation for the explosion of human culture. New models of conformity examine its sometimes exotic dynamics due to its non-linearity with some non-human studies supporting this including fish and birds.
+```{r}
+# Create an example agent-based model with success-biased learning...
+abm <- 
+  make_abm(graph = make_regular_lattice(10, 4)) %>%
+  # Initialize 20% (2) agents with Adaptive behavior w/ 
+  # adaptive fitness 1.125x the non-adaptive Legacy behavior
+  initialize_agents(initial_prevalence = 0.2, adaptive_fitness = 1.125)
 
-Using this formal approach, we can provide some reasons why *human* culture likely did not exclusively, or even extensively, rely on conformity as its main drive. We know of no other intelligent being, biological or artificial, that can match human capacity for information integration, exploration, and complex actions [@Witt2024]. Specifically, I showed that conformity is significantly weaker during the critical period of *entrenchment onset* compared to success-biased learning, which provides relatively strong selection signals for learners throughout the diffusion process. I also showed that at the very earliest stages of diffusion that success-biased diffusion is stronger, but that anti-conformity can rapidly provide strong selection signals after a non-trivial prevalence threshold has been reached. But, again, once the adaptation starts reaching entrenchment onset, conformity-based selection rapidly loses its strength.
+# Inspect the initialization to ensure 2 agents do Adaptive
+p <- plot_network_adoption(
+  abm, layout = igraph::in_circle(), 
+  plot_mod = \(p) p + ggtitle("Adoption at t = 0"), edgewidth = 0.75
+)
+print(p)
+```
 
-To make this more concrete, recall that as prevalence increases towards $a = 0.5$ under anti-conformity ($\gamma < 0$), the rate of change of prevalence $\dot a$ is positive but rapidly approaches 0. At $a = 0.5$, $\dot a$ *is* zero no matter the value of $\gamma$. If somehow $a$ continued past $a = 0.5$ but with $\gamma < 0$, this would make $\dot a < 0$, which would cause diffusion to a halt at $a = 0.5$, or possibly oscillate around this value depending on other contextual factors [@Denton2020].
+```{r}
+# Run and visualize a single trial, add title with f_A
+p_prevalence <- 
+  make_abm(graph = make_regular_lattice(20, 4)) %>%
+  initialize_agents(initial_prevalence = 0.2, adaptive_fitness = 1.125) %>%
+  run_trial %>%
+  plot_prevalence(tracked_behaviors = c("Adaptive")) %>% 
+{ . + ggplot2::ggtitle("Adaptive fitness = 1.125") }
 
-For this part:
+print(p_prevalence)
+```
 
-1.  First, what happens when $\gamma = 0$? Why?
-2.  Plot the diffusion rate over $a$ for a few different values of $\pm \gamma$ (e.g., $\gamma = \pm 0.2, \pm 1$, or $\gamma = 0$. Explain what happens around $a=0.5$ (e.g., from $a = 0.25$ to $a = 0.75$, where conformity effects get increasingly weak and then change sign.
-3.  Explain how this supports understanding the derivation of limiting cases for $\dot a(a = 0.5 \pm \epsilon)$, i.e., the rate of change of adoption just before and after entrenchment onset. See Equations X.X - X.Y in the notes for these limiting cases.
+```{r}
+adoption_rate = 0.8
+ 
+# Run model with 
+g <- igraph::make_graph(~ 1-2, 1-3, 1-4, 3-2)
+mps <- make_model_parameters(graph = g, adaptive_fitness = 1.2, drop_rate = 0.1
+)
+cabm <- make_abm(mps); 
+cabm$get_agent(2)$set_behavior("Adaptive"); 
+cabm$get_agent(2)$set_fitness(1.2); 
+trial <- run_trial(cabm, stop = fixated)
+plot_prevalence(trial, tracked_behaviors = c("Adaptive", "Legacy"))
+```
+
+### Run several trials across parameters
+
+```{r}
+# Model generator
+abm_gen <- function(params) {
+  do.call(make_abm, params) %>%
+    initialize_agents(
+      initial_prevalence = params$initial_prevalence,
+      adaptive_fitness = params$adaptive_fitness
+    )
+}
+```
+
+```{r}
+# Run five trials per parameter setting, i.e., for each specified adaptive_fitness
+adaptive_fitness_vals <- c(0.9, 1.1, 1.4)
+trials <-
+  run_trials(
+    abm_gen,
+    n_trials_per_param = 5,
+    stop = socmod::fixated,
+    n_agents = 20,
+    initial_prevalence = 0.1,
+    adaptive_fitness = adaptive_fitness_vals
+  )
+# Summarize within trials only; rename and factor adaptive fitness for display
+summary <- summarise_prevalence(
+  trials, input_parameters = "adaptive_fitness", across_trials = F
+) %>% 
+  dplyr::mutate(
+    `Adaptive fitness` = factor(adaptive_fitness, adaptive_fitness_vals)
+  )
+
+p <- ggplot(
+  summary,
+  aes(x=Step, y=Prevalence,
+      color=`Adaptive fitness`,
+      linetype=`Adaptive fitness`,
+      group = trial_id)) +
+  geom_line(linewidth=1.4, alpha = 0.875) + theme_classic(base_size = 16) +
+  ggplot2::scale_color_manual(values = unname(SOCMOD_PALETTE))
+
+print(p)
+```
+
+```{r}
+# Run five trials per parameter setting, i.e., for each specified adaptive_fitness
+adaptive_fitness_vals <- c(0.8, 1.0, 1.2, 1.4)
+trials <-
+  run_trials(
+    abm_gen,
+    n_trials_per_param = 5,
+    stop = socmod::fixated,
+    syncfile = "demo-experiment.RData",
+    n_agents = 20,
+    .progress = T,
+    overwrite = T,
+    initial_prevalence = 0.1,
+    adaptive_fitness = adaptive_fitness_vals
+  )
+```
+
+We ran five trials for each of the four adaptive fitness values. Then we should have $5 \times 4 = 20$ trials total. Let's check.
+
+```{r}
+length(trials)
+```
+
+YAY.\
+\
+Now let's plot the results. We're aiming for the \[outcomes figure in the `socmod` doc\](), but we have many less trials than I used there, since it will take too long to run that many for this tutorial.
+
+```{r}
+outcomes <- summarise_outcomes(
+  trials, 
+  input_parameters = "adaptive_fitness", 
+  outcome_measures = c("success_rate", "mean_fixation_steps")
+) 
+
+max_fix_time <- max(outcomes$Value[outcomes$Measure == "mean_fixation_steps"])
+# Normalize to calculate mean fixation time as a fraction of maximum
+outcomes_norm <- outcomes %>%
+  dplyr::mutate(Value = dplyr::case_when(
+    Measure == "mean_fixation_steps" ~ Value / max_fix_time,
+    TRUE ~ Value
+  ))
+# Rename and set order of Measure factors to avoid messing with the legend in plotting
+outcomes_norm$Measure[outcomes_norm$Measure == "success_rate"] <- "Success rate"
+outcomes_norm$Measure[outcomes_norm$Measure == "mean_fixation_steps"] <- "Normalized fixation time"
+outcomes_norm$Measure <- factor(outcomes_norm$Measure, levels = c(
+  "Success rate", "Normalized fixation time"
+))
+
+# Use a custom socmod line color
+line_color <- SOCMOD_PALETTE_CVD["pink"]
+outcomes_norm %>%
+  ggplot2::ggplot(aes(x = adaptive_fitness, y = Value, linetype = Measure)) +
+  geom_line(color = line_color, linewidth=1.5) + 
+  scale_x_continuous(breaks = adaptive_fitness_vals) +
+  theme_classic(base_size = 16) + xlab("Adaptive fitness") + ylab("Value")
+```
+
+## Exercise: contagion and frequency-biased learning
+
+`socmod` provides contagion and frequency-biased learning strategies. In the first example above we assumed agents learned via contagion learning. Then for our computational experiment example we switched to success-biased learning.
 
 ## Cooperative conservation
 
-In the chapter on cooperative conservation, we developed both a geometric game theory analysis and agent-based model of the evolution of cooperation on a spatial grid. This has applications to
+In the chapter on cooperative conservation, I develop both a geometric game theory analysis and agent-based model of the evolution of cooperation on a spatial grid. This has applications to conservation problems where cooperation on a spatial grid is essential, as in groundwater conservation in the California Central Valley and other government-managed watersheds.
+
+We will work through that chapter together. There are several exercises there that you could choose from if you want to gain experience with spatial agent-based modeling for conservation.
 
 ## More exercises
 
