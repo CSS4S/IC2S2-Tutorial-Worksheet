@@ -48,7 +48,108 @@ R6 classes have *fields*, which can be used to represent attributes, and *method
 
 See the [Computational Techniques for Agent-based Modeling section of the Tutorial Notes Intro](https://css4s.github.io/IC2S2-Tutorial/intro.html#computational-techniques-for-agent-based-modeling) for some demonstrations of **functional programming** and **defining custom classes in R**, as well as helpful notes on data collections in R. We make extensive use of functional programming in agent-based modeling because we provide *rules* in the form of software *functions* that exist independently of models or agents. It is not just `socmod` that uses functional programming. NetLogo, one of if not the most widely used open source agent-based modeling software packages is essentially a functional programming language that evolved from other functional programming languages from some decades ago.
 
-### Live coding example: our own custom class
+### Live coding example: functional programming
+
+```{r}
+
+library(purrr)
+
+
+vec <- c(1, 2, 3, 4)
+
+map(vec, function(x) { return (0.5 * x) })
+```
+
+```{r}
+map_vec(vec, \(x) x * 0.5)
+```
+
+```{r}
+map_vec(vec, ~ .x * 0.5)
+```
+
+####  Initialize agents with functional programming...
+
+```{r}
+library(socmod)
+
+# Initialize one agent
+a1 <- Agent$new(1)
+print(a1)
+```
+
+```{r}
+
+f_A = 1.2
+f_L = 1.0
+N = 10
+create_agent <- function(id) {
+  if (runif(1) < 0.2) {
+    ret_agent <- Agent$new(id, fitness = f_A, behavior = "Adaptive")  
+  } else {
+    ret_agent <- Agent$new(id, fitness = f_L, behavior = "Legacy")
+  }
+  
+  return (ret_agent)
+}
+
+agents <- map(1:N, create_agent)
+
+length(agents)
+
+behaviors <- map_vec(agents, ~ .x$get_behavior())
+table(behaviors)
+```
+
+###  Live coding example: our own custom class
+
+```{r}
+
+library(R6)
+
+Cat <- R6Class(
+  "Cat", 
+  public = list(
+    indoor = TRUE,
+    color = "Brown",
+    yawn = function() {
+      print("Meeaauuuuwwn")
+    },
+    sleeps_a_lot = TRUE,
+    
+    initialize = function(indoor = TRUE, color = "Brown", sleeps_a_lot = TRUE) {
+      self$indoor = indoor
+      self$color = color
+      self$sleeps_a_lot = sleeps_a_lot
+      self$yawn()
+    },
+    
+    live_one_day = function() {
+      if (self$sleeps_a_lot) {
+        for (ii in 1:10) {
+          self$yawn()
+        }
+      } else {
+        for (ii in 1:4) {
+          self$yawn()
+        }
+      }
+    }
+  )
+)
+```
+
+With the Cat class defined, let's create two cats, a sleepy and not sleepy one
+
+```{r}
+sleepy <- Cat$new()
+sleepy$live_one_day()
+```
+
+```{r}
+not_sleepy <- Cat$new(sleeps_a_lot = FALSE)
+not_sleepy$live_one_day()
+```
 
 ### Exercise:
 
@@ -80,22 +181,20 @@ print(p)
 # Run and visualize a single trial, add title with f_A
 p_prevalence <- 
   make_abm(graph = make_regular_lattice(20, 4)) %>%
-  initialize_agents(initial_prevalence = 0.2, adaptive_fitness = 1.125) %>%
+  initialize_agents(initial_prevalence = 0.2, 
+                    adaptive_fitness = 1.125) %>%
   run_trial %>%
   plot_prevalence(tracked_behaviors = c("Adaptive")) %>% 
-{ . + ggplot2::ggtitle("Adaptive fitness = 1.125") }
+  { . + ggplot2::ggtitle("Adaptive fitness = 1.125") }
 
 print(p_prevalence)
 ```
 
 ```{r}
-adoption_rate = 0.8
- 
-# Run model with 
 g <- igraph::make_graph(~ 1-2, 1-3, 1-4, 3-2)
-mps <- make_model_parameters(graph = g, adaptive_fitness = 1.2, drop_rate = 0.1
-)
-cabm <- make_abm(mps); 
+# mps <- make_model_parameters(graph = g, adaptive_fitness = 1.8, drop_rate = 0.1
+# )
+cabm <- make_abm(n_agents = 10); 
 cabm$get_agent(2)$set_behavior("Adaptive"); 
 cabm$get_agent(2)$set_fitness(1.8); 
 trial <- run_trial(cabm, stop = fixated)
@@ -127,6 +226,7 @@ trials <-
     initial_prevalence = 0.1,
     adaptive_fitness = adaptive_fitness_vals
   )
+length(trials)
 # Summarize within trials only; rename and factor adaptive fitness for display
 summary <- summarise_prevalence(
   trials, input_parameters = "adaptive_fitness", across_trials = F
@@ -146,6 +246,8 @@ p <- ggplot(
 
 print(p)
 ```
+
+\
 
 ```{r}
 # Run five trials per parameter setting, i.e., for each specified adaptive_fitness
